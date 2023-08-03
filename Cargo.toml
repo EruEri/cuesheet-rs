@@ -2,6 +2,12 @@
 name = "cuesheet-rs"
 version = "0.1.0"
 edition = "2021"
+authors = ["EruEri"]
+description = "A library to create cue sheet"
+readme = "README.md"
+license = "MPL-2.0"
+keywords = ["cuesheet"]
+publish = false
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

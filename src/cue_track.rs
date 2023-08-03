@@ -170,7 +170,7 @@ impl CueTrack {
                     .map(CueCdText::to_string)
                     .collect::<Vec<String>>()
                     .join(format!("\n{}{}", abs_tab, tab).as_str());
-                format!("{}{}{}\n",abs_tab, tab, s)
+                format!("{}{}{}\n", abs_tab, tab, s)
             }
         }
     }

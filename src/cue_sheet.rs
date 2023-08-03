@@ -124,6 +124,11 @@ impl CueSheet {
         sheet
     }
 
+    pub fn add_catalog(&mut self, catalog: &str) -> &mut Self {
+        self.catalog = Some(catalog.to_string());
+        self
+    }
+
     pub fn add_arranger(&mut self, arranger: &str) -> &mut Self {
         let arranger = CueCdText::Arrager(arranger.to_owned());
         let _ = self.cd_texts.insert(arranger);
