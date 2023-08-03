@@ -1,7 +1,15 @@
-use std::collections::{BTreeSet, BTreeMap};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    ops::Add,
+};
 
-use crate::{cue_cd_text::CueCdText, cue_track::CueTrack, cue_file_format::CueFileFormat};
-
+use crate::{
+    cue_cd_text::CueCdText,
+    cue_duration::CueDuration,
+    cue_file_format::CueFileFormat,
+    cue_track::{ComputeKind, CueTrack},
+    util::cue_format_string_value,
+};
 
 #[derive(Debug)]
 pub struct CueSheet {
@@ -10,25 +18,102 @@ pub struct CueSheet {
     cd_texts: BTreeSet<CueCdText>,
     rems: BTreeMap<String, String>,
     file: (String, CueFileFormat),
-    tracks: BTreeSet<CueTrack>
+    tracks: BTreeSet<CueTrack>,
 }
 
+impl CueSheet {
+    fn repr_catalog(&self) -> String {
+        self.catalog
+            .iter()
+            .map(|s| {
+                let s = cue_format_string_value(&s);
+                format!("CATALOG {}\n", s)
+            })
+            .collect::<String>()
+    }
+
+    fn repr_cdtextfile(&self) -> String {
+        self.cd_text_file
+            .iter()
+            .map(|s| {
+                let s = cue_format_string_value(&s);
+                format!("CDTEXTFILE {}\n", s)
+            })
+            .collect::<String>()
+    }
+
+    fn repr_cdtexts(&self) -> String {
+        match self.cd_texts.is_empty() {
+            true => String::new(),
+            false => {
+                let s = self
+                    .cd_texts
+                    .iter()
+                    .map(CueCdText::to_string)
+                    .collect::<Vec<String>>()
+                    .join("\n");
+                format!("{}\n", s)
+            }
+        }
+    }
+
+    fn repr_rems(&self) -> String {
+        let mapper = |(key, value)| format!("REM {} {}\n", key, value);
+        match self.rems.is_empty() {
+            true => String::new(),
+            false => self.rems.iter().map(mapper).collect::<Vec<_>>().join(""),
+        }
+    }
+
+    fn repr_file(&self) -> String {
+        let (ref name, ref format) = self.file;
+        format!("FILE \"{}\" {}", name, format)
+    }
+
+    fn repr_tracks(&self, sum: bool) -> String {
+        self.tracks
+            .iter()
+            .scan(CueDuration::zero(), |state, track| {
+                *state = track.track_offset().add(*state);
+                let compute = if sum {
+                    Some(ComputeKind::Set(*state))
+                } else {
+                    None
+                };
+                Some(track.repr(true, compute))
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
+    }
+
+    pub fn repr(&self, sum: bool) -> String {
+        let str_catalog = self.repr_catalog();
+        let str_cd_text_file = self.repr_cdtextfile();
+        let str_cd_texts = self.repr_cdtexts();
+        let str_rems = self.repr_rems();
+        let str_file = self.repr_file();
+        let str_tracks = self.repr_tracks(sum);
+        format!(
+            "{}{}{}{}{}{}",
+            str_catalog, str_cd_text_file, str_cd_texts, str_rems, str_file, str_tracks
+        )
+    }
+}
 
 #[derive(Debug)]
 pub struct CueSheetBuilder {
-    sheet: CueSheet
+    sheet: CueSheet,
 }
-
 
 impl CueSheetBuilder {
     pub fn new(filename: &str, format: CueFileFormat) -> Self {
         let sheet = CueSheet {
-            catalog : None,
-            cd_text_file : None,
-            cd_texts : BTreeSet::new(),
-            rems : BTreeMap::new(),
-            file : (filename.to_string(),format),
-            tracks : BTreeSet::new(),
+            catalog: None,
+            cd_text_file: None,
+            cd_texts: BTreeSet::new(),
+            rems: BTreeMap::new(),
+            file: (filename.to_string(), format),
+            tracks: BTreeSet::new(),
         };
         Self { sheet: sheet }
     }
@@ -68,7 +153,7 @@ impl CueSheetBuilder {
         let _ = self.sheet.cd_texts.insert(message);
         self
     }
-    
+
     pub fn add_performer(&mut self, performer: &str) -> &mut Self {
         let performer = CueCdText::Performer(performer.to_string());
         let _ = self.sheet.cd_texts.insert(performer);
@@ -85,7 +170,7 @@ impl CueSheetBuilder {
         let title = CueCdText::Title(title.to_owned());
         let _ = self.sheet.cd_texts.insert(title);
         self
-    } 
+    }
 
     pub fn add_rem(&mut self, key: &str, value: &str) -> &mut Self {
         let key = key.to_ascii_uppercase();

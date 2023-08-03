@@ -1,7 +1,9 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use crate::{
-    cue_cd_text::CueCdText, cue_duration::{CueDuration, DurationFormat}, cue_track_flag::CueTrackFlag,
+    cue_cd_text::CueCdText,
+    cue_duration::{CueDuration, DurationFormat},
+    cue_track_flag::CueTrackFlag,
     cue_track_mode::CueTrackMode,
 };
 
@@ -23,12 +25,10 @@ pub struct CueTrackBuilder {
 #[derive(Debug, Clone, Copy)]
 pub enum ComputeKind {
     Set(CueDuration),
-    Sum(CueDuration)
+    Sum(CueDuration),
 }
 
-impl Eq for CueTrack {
-    
-}
+impl Eq for CueTrack {}
 
 impl PartialEq for CueTrack {
     fn eq(&self, other: &Self) -> bool {
@@ -51,7 +51,7 @@ impl Ord for CueTrack {
 impl CueTrackBuilder {
     pub fn new(track_index: u32, mode: CueTrackMode) -> Self {
         let track = CueTrack {
-            track:(track_index, mode),
+            track: (track_index, mode),
             flags: BTreeSet::new(),
             pregap: None,
             postgap: None,
@@ -117,7 +117,7 @@ impl CueTrackBuilder {
         let _ = self.track.cd_texts.insert(message);
         self
     }
-    
+
     pub fn add_performer(&mut self, performer: &str) -> &mut Self {
         let performer = CueCdText::Performer(performer.to_string());
         let _ = self.track.cd_texts.insert(performer);
@@ -134,7 +134,7 @@ impl CueTrackBuilder {
         let title = CueCdText::Title(title.to_owned());
         let _ = self.track.cd_texts.insert(title);
         self
-    } 
+    }
 
     pub fn add_rem(&mut self, key: &str, value: &str) -> &mut Self {
         let key = key.to_ascii_uppercase();
@@ -142,14 +142,19 @@ impl CueTrackBuilder {
         self
     }
 
-
     pub fn track(self) -> CueTrack {
         self.track
     }
 }
 
-
 impl CueTrack {
+    pub fn track_offset(&self) -> CueDuration {
+        self.indexes
+            .iter()
+            .fold(CueDuration::zero(), |acc_duration, (_, elt_duration)| {
+                acc_duration + *elt_duration
+            })
+    }
 
     fn repr_cdtexts(&self, ctab: bool) -> String {
         let abs_tab = "  ";
@@ -157,11 +162,12 @@ impl CueTrack {
         match self.cd_texts.is_empty() {
             true => String::new(),
             false => {
-                let s =  self
-                .cd_texts.iter()
-                .map(CueCdText::to_string)
-                .collect::<Vec<String>>()
-                .join(format!("\n{}{}", abs_tab, tab).as_str());
+                let s = self
+                    .cd_texts
+                    .iter()
+                    .map(CueCdText::to_string)
+                    .collect::<Vec<String>>()
+                    .join(format!("\n{}{}", abs_tab, tab).as_str());
                 format!("{}{}", tab, s)
             }
         }
@@ -173,11 +179,12 @@ impl CueTrack {
         match self.flags.is_empty() {
             true => String::new(),
             false => {
-                let s = 
-                self.flags.iter()
+                let s = self
+                    .flags
+                    .iter()
                     .map(CueTrackFlag::to_string)
                     .collect::<Vec<_>>()
-                    .join( abs_tab);
+                    .join(abs_tab);
                 format!("{}{}FLAGS{}\n", abs_tab, tab, s)
             }
         }
@@ -186,17 +193,10 @@ impl CueTrack {
     fn repr_rems(&self, ctab: bool) -> String {
         let abs_tab = "  ";
         let tab = if ctab { abs_tab } else { "" };
-        let mapper = |(key, value)| {
-            format!("{}{}REM {} {}\n", abs_tab, tab, key, value)
-        };
+        let mapper = |(key, value)| format!("{}{}REM {} {}\n", abs_tab, tab, key, value);
         match self.rems.is_empty() {
             true => String::new(),
-            false => 
-                self.rems.iter()
-                    .map(mapper)
-                    .collect::<Vec<_>>()
-                    .join("")
-            
+            false => self.rems.iter().map(mapper).collect::<Vec<_>>().join(""),
         }
     }
 
@@ -219,11 +219,9 @@ impl CueTrack {
     fn repr_indexes(&self, ctab: bool, compute: &Option<ComputeKind>) -> String {
         let abs_tab = "  ";
         let tab = if ctab { abs_tab } else { "" };
-        let compute_duration = |duration: &CueDuration, comp| {
-            match comp {
-                ComputeKind::Set(d) => d,
-                ComputeKind::Sum(d) => *duration + d
-            }
+        let compute_duration = |duration: &CueDuration, comp| match comp {
+            ComputeKind::Set(d) => d,
+            ComputeKind::Sum(d) => *duration + d,
         };
         let string_of_index = |(track_index, duration)| {
             let s = compute
@@ -234,28 +232,28 @@ impl CueTrack {
         };
         match self.indexes.is_empty() {
             true => String::new(),
-            false => 
-                self.indexes.iter()
-                    .map(string_of_index)
-                    .collect::<Vec<_>>()
-                    .join("\n")
-        } 
+            false => self
+                .indexes
+                .iter()
+                .map(string_of_index)
+                .collect::<Vec<_>>()
+                .join("\n"),
+        }
     }
-
-
 
     pub fn repr(&self, ctab: bool, compute: Option<ComputeKind>) -> String {
         let abs_tab = "  ";
         let tab = if ctab { abs_tab } else { "" };
-        let str_track = 
-            format!("{}TRACK 0{} {}\n", tab, self.track.0, self.track.1);
+        let str_track = format!("{}TRACK 0{} {}\n", tab, self.track.0, self.track.1);
         let str_pregap = self.repr_pregap(ctab);
         let str_postgap = self.repr_postgap(ctab);
         let str_cd_texts = self.repr_cdtexts(ctab);
         let str_flags = self.repr_flags(ctab);
         let str_rem = self.repr_rems(ctab);
         let str_indexes = self.repr_indexes(ctab, &compute);
-        format!("{}{}{}{}{}{}{}", str_track, str_cd_texts, str_flags, str_rem, str_pregap,
-        str_postgap, str_indexes)
+        format!(
+            "{}{}{}{}{}{}{}",
+            str_track, str_cd_texts, str_flags, str_rem, str_pregap, str_postgap, str_indexes
+        )
     }
 }
