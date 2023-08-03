@@ -26,7 +26,7 @@ pub struct CueDuration {
 impl Display for CueDuration {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let CueDuration { min, sec, frame } = self;
-        write!(f, "{:02}:{}:{}", min, sec, frame)
+        write!(f, "{:02}:{:02}:{:02}", min, sec, frame)
     }
 }
 

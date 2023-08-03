@@ -20,14 +20,14 @@ pub(crate) mod util;
 pub use crate::cue_cd_text::CueCdText;
 pub use crate::cue_duration::{CueDuration, DurationFormat};
 pub use crate::cue_file_format::CueFileFormat;
-pub use crate::cue_sheet::{CueSheet, CueSheetBuilder};
+pub use crate::cue_sheet::CueSheet;
 pub use crate::cue_track::{ComputeKind, CueTrack};
 pub use crate::cue_track_flag::CueTrackFlag;
 pub use crate::cue_track_mode::CueTrackMode;
 
 #[cfg(test)]
 mod test {
-    use crate::CueTrack;
+    use crate::{CueTrack, CueSheet};
 
 
     #[test]
@@ -123,6 +123,25 @@ mod test {
         .add_title("SH!NE GO!NG UP (- Pf MiX -)")
         .add_index(1, crate::DurationFormat::MinSecMil(4, 40, 965));
 
+    let mut cuesheet = CueSheet::new("", crate::CueFileFormat::WAVE);
+    let _ = cuesheet
+        .add_performer("喜多村英梨")
+        .add_title("IЯiDÉSCEИT%V!SIØN")
+        .add_track(dizzy)
+        .add_track(synapse)
+        .add_track(egoism)
+        .add_track(anger)
+        .add_track(kindan_kajitsu)
+        .add_track(belief_in_oneself)
+        .add_track(shine_going_up)
+        .add_track(holy_shit)
+        .add_track(eternity)
+        .add_track(nijiiro)
+        .add_track(egoism_mix)
+        .add_track(kindan_kajitsu_mix)
+        .add_track(shine_going_up_mix);
+
+    println!("{}", cuesheet.repr(true));
     
     }
 }

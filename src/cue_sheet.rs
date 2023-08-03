@@ -77,16 +77,17 @@ impl CueSheet {
 
     fn repr_file(&self) -> String {
         let (ref name, ref format) = self.file;
-        format!("FILE \"{}\" {}", name, format)
+        format!("FILE \"{}\" {}\n", name, format)
     }
 
     fn repr_tracks(&self, sum: bool) -> String {
         self.tracks
             .iter()
             .scan(CueDuration::zero(), |state, track| {
+                let offset = *state;
                 *state = track.track_offset().add(*state);
                 let compute = if sum {
-                    Some(ComputeKind::Set(*state))
+                    Some(ComputeKind::Set(offset))
                 } else {
                     None
                 };
@@ -110,14 +111,9 @@ impl CueSheet {
     }
 }
 
-#[derive(Debug)]
-pub struct CueSheetBuilder {
-    sheet: CueSheet,
-}
-
-impl CueSheetBuilder {
+impl CueSheet {
     pub fn new(filename: &str, format: CueFileFormat) -> Self {
-        let sheet = CueSheet {
+        let sheet = Self {
             catalog: None,
             cd_text_file: None,
             cd_texts: BTreeSet::new(),
@@ -125,75 +121,71 @@ impl CueSheetBuilder {
             file: (filename.to_string(), format),
             tracks: BTreeSet::new(),
         };
-        Self { sheet: sheet }
+        sheet
     }
 
     pub fn add_arranger(&mut self, arranger: &str) -> &mut Self {
         let arranger = CueCdText::Arrager(arranger.to_owned());
-        let _ = self.sheet.cd_texts.insert(arranger);
+        let _ = self.cd_texts.insert(arranger);
         self
     }
 
     pub fn add_composer(&mut self, composer: &str) -> &mut Self {
         let composer = CueCdText::Composer(composer.to_string());
-        let _ = self.sheet.cd_texts.insert(composer);
+        let _ = self.cd_texts.insert(composer);
         self
     }
 
     pub fn add_disc_id(&mut self, composer: &str) -> &mut Self {
         let disc_id = CueCdText::DiscId(composer.to_owned());
-        let _ = self.sheet.cd_texts.insert(disc_id);
+        let _ = self.cd_texts.insert(disc_id);
         self
     }
 
     pub fn add_genre(&mut self, genre: &str) -> &mut Self {
         let genre = CueCdText::Genre(genre.to_string());
-        let _ = self.sheet.cd_texts.insert(genre);
+        let _ = self.cd_texts.insert(genre);
         self
     }
 
     pub fn add_iscr(&mut self, iscr: &str) -> &mut Self {
         let iscr = CueCdText::ISrc(iscr.to_string());
-        let _ = self.sheet.cd_texts.insert(iscr);
+        let _ = self.cd_texts.insert(iscr);
         self
     }
 
     pub fn add_message(&mut self, message: &str) -> &mut Self {
         let message = CueCdText::Message(message.to_string());
-        let _ = self.sheet.cd_texts.insert(message);
+        let _ = self.cd_texts.insert(message);
         self
     }
 
     pub fn add_performer(&mut self, performer: &str) -> &mut Self {
         let performer = CueCdText::Performer(performer.to_string());
-        let _ = self.sheet.cd_texts.insert(performer);
+        let _ = self.cd_texts.insert(performer);
         self
     }
 
     pub fn add_songwriter(&mut self, songwriter: &str) -> &mut Self {
         let songwriter = CueCdText::SongWriter(songwriter.to_string());
-        let _ = self.sheet.cd_texts.insert(songwriter);
+        let _ = self.cd_texts.insert(songwriter);
         self
     }
 
     pub fn add_title(&mut self, title: &str) -> &mut Self {
         let title = CueCdText::Title(title.to_owned());
-        let _ = self.sheet.cd_texts.insert(title);
+        let _ = self.cd_texts.insert(title);
         self
     }
 
     pub fn add_rem(&mut self, key: &str, value: &str) -> &mut Self {
         let key = key.to_ascii_uppercase();
-        let _ = self.sheet.rems.insert(key, value.to_owned());
+        let _ = self.rems.insert(key, value.to_owned());
         self
     }
 
     pub fn add_track(&mut self, track: CueTrack) -> &mut Self {
-        let _ = self.sheet.tracks.insert(track);
+        let _ = self.tracks.insert(track);
         self
-    }
-
-    pub fn sheet(self) -> CueSheet {
-        self.sheet
     }
 }
