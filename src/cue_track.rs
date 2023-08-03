@@ -20,6 +20,34 @@ pub struct CueTrackBuilder {
     track: CueTrack,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub enum ComputeKind {
+    Set(CueDuration),
+    Sum(CueDuration)
+}
+
+impl Eq for CueTrack {
+    
+}
+
+impl PartialEq for CueTrack {
+    fn eq(&self, other: &Self) -> bool {
+        self.track.0 == other.track.0
+    }
+}
+
+impl PartialOrd for CueTrack {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.track.0.cmp(&other.track.0))
+    }
+}
+
+impl Ord for CueTrack {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.track.0.cmp(&other.track.0)
+    }
+}
+
 impl CueTrackBuilder {
     pub fn new(track_index: u32, mode: CueTrackMode) -> Self {
         let track = CueTrack {
@@ -54,7 +82,7 @@ impl CueTrackBuilder {
         self
     }
 
-    pub fn set_arranger(&mut self, arranger: &str) -> &mut Self {
+    pub fn add_arranger(&mut self, arranger: &str) -> &mut Self {
         let arranger = CueCdText::Arrager(arranger.to_owned());
         let _ = self.track.cd_texts.insert(arranger);
         self
@@ -117,5 +145,117 @@ impl CueTrackBuilder {
 
     pub fn track(self) -> CueTrack {
         self.track
+    }
+}
+
+
+impl CueTrack {
+
+    fn repr_cdtexts(&self, ctab: bool) -> String {
+        let abs_tab = "  ";
+        let tab = if ctab { abs_tab } else { "" };
+        match self.cd_texts.is_empty() {
+            true => String::new(),
+            false => {
+                let s =  self
+                .cd_texts.iter()
+                .map(CueCdText::to_string)
+                .collect::<Vec<String>>()
+                .join(format!("\n{}{}", abs_tab, tab).as_str());
+                format!("{}{}", tab, s)
+            }
+        }
+    }
+
+    fn repr_flags(&self, tab: bool) -> String {
+        let abs_tab = "  ";
+        let tab = if tab { abs_tab } else { "" };
+        match self.flags.is_empty() {
+            true => String::new(),
+            false => {
+                let s = 
+                self.flags.iter()
+                    .map(CueTrackFlag::to_string)
+                    .collect::<Vec<_>>()
+                    .join( abs_tab);
+                format!("{}{}FLAGS{}\n", abs_tab, tab, s)
+            }
+        }
+    }
+
+    fn repr_rems(&self, ctab: bool) -> String {
+        let abs_tab = "  ";
+        let tab = if ctab { abs_tab } else { "" };
+        let mapper = |(key, value)| {
+            format!("{}{}REM {} {}\n", abs_tab, tab, key, value)
+        };
+        match self.rems.is_empty() {
+            true => String::new(),
+            false => 
+                self.rems.iter()
+                    .map(mapper)
+                    .collect::<Vec<_>>()
+                    .join("")
+            
+        }
+    }
+
+    fn repr_pregap(&self, ctab: bool) -> String {
+        let abs_tab = "  ";
+        let tab = if ctab { abs_tab } else { "" };
+        self.pregap
+            .map(|duration| format!("{}{}PREGAP {}\n", abs_tab, tab, duration))
+            .unwrap_or(String::new())
+    }
+
+    fn repr_postgap(&self, ctab: bool) -> String {
+        let abs_tab = "  ";
+        let tab = if ctab { abs_tab } else { "" };
+        self.pregap
+            .map(|duration| format!("{}{}POSTGAP {}\n", abs_tab, tab, duration))
+            .unwrap_or(String::new())
+    }
+
+    fn repr_indexes(&self, ctab: bool, compute: &Option<ComputeKind>) -> String {
+        let abs_tab = "  ";
+        let tab = if ctab { abs_tab } else { "" };
+        let compute_duration = |duration: &CueDuration, comp| {
+            match comp {
+                ComputeKind::Set(d) => d,
+                ComputeKind::Sum(d) => *duration + d
+            }
+        };
+        let string_of_index = |(track_index, duration)| {
+            let s = compute
+                .map(|kind| compute_duration(duration, kind))
+                .unwrap_or(duration.clone())
+                .to_string();
+            format!("{}{}INDEX 0{} {}", abs_tab, tab, track_index, s)
+        };
+        match self.indexes.is_empty() {
+            true => String::new(),
+            false => 
+                self.indexes.iter()
+                    .map(string_of_index)
+                    .collect::<Vec<_>>()
+                    .join("\n")
+        } 
+    }
+
+
+
+    pub fn repr(&self, ctab: bool, compute: Option<ComputeKind>) -> String {
+        let abs_tab = "  ";
+        let tab = if ctab { abs_tab } else { "" };
+        let str_track = 
+            format!("{}TRACK 0{} {}\n", tab, self.track.0, self.track.1);
+        let str_pregap = self.repr_pregap(ctab);
+        let str_postgap = self.repr_postgap(ctab);
+        let str_cd_texts = self.repr_cdtexts(ctab);
+        let str_flags = self.repr_flags(ctab);
+        let str_rem = self.repr_rems(ctab);
+        let str_indexes = self.repr_indexes(ctab, &compute);
+        format!("{}{}{}{}{}{}{}", str_track, str_cd_texts, str_flags, str_rem, str_pregap,
+        str_postgap, str_indexes)
     }
 }

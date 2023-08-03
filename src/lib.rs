@@ -4,4 +4,5 @@ pub mod cue_file_format;
 pub mod cue_track;
 pub mod cue_track_flag;
 pub mod cue_track_mode;
+pub mod cue_sheet;
 pub(crate) mod util;
