@@ -10,6 +10,8 @@
 
 use std::{
     collections::{BTreeMap, BTreeSet},
+    fs::OpenOptions,
+    io::Write,
     ops::Add,
 };
 
@@ -192,5 +194,20 @@ impl CueSheet {
     pub fn add_track(&mut self, track: CueTrack) -> &mut Self {
         let _ = self.tracks.insert(track);
         self
+    }
+
+    pub fn export<P: AsRef<std::path::Path>>(
+        &self,
+        sum: bool,
+        outfile: P,
+    ) -> Result<(), std::io::Error> {
+        let mut file = OpenOptions::new()
+            .create(true)
+            .truncate(true)
+            .write(true)
+            .read(false)
+            .open(outfile)?;
+        let str_repr = self.repr(sum);
+        file.write_all(str_repr.as_bytes())
     }
 }

@@ -167,6 +167,6 @@ mod test {
             .add_track(track)
             .add_track(track2);
 
-        let () = println!("{}", sheet.repr(true));
+        let _ = sheet.export(true, "output.cue");
     }
 }

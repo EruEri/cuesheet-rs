@@ -29,7 +29,7 @@ A simple example on how to create a cuesheet
             .add_track(track)
             .add_track(track2);
 
-        let () = println!("{}", sheet.repr(true));
+        let _ = sheet.export(true, "output.cue");
 ```
 
 Produce
